@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent, useEffect } from 'react';
+import { useState, type ChangeEvent, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Camera, ChefHat, Sparkles, UploadCloud, Trash2, PlusCircle, Loader2, AlertCircle } from 'lucide-react';
 
@@ -18,11 +18,16 @@ import type { DetectIngredientsOutput } from '@/ai/flows/detect-ingredients';
 import { suggestRecipes } from '@/ai/flows/suggest-recipes';
 import type { SuggestRecipesOutput } from '@/ai/flows/suggest-recipes';
 
+interface RecipeDetail {
+  name: string;
+  steps: string;
+}
+
 export default function PhotoRecipeClientPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [ingredients, setIngredients] = useState<string[]>([]);
-  const [recipes, setRecipes] = useState<string[]>([]);
+  const [recipes, setRecipes] = useState<RecipeDetail[]>([]);
   
   const [isLoadingIngredients, setIsLoadingIngredients] = useState(false);
   const [isLoadingRecipes, setIsLoadingRecipes] = useState(false);
@@ -272,9 +277,9 @@ export default function PhotoRecipeClientPage() {
                 <Accordion type="single" collapsible className="w-full">
                   {recipes.map((recipe, index) => (
                     <AccordionItem value={`item-${index}`} key={index} className="border-b border-primary/20">
-                      <AccordionTrigger className="text-lg hover:no-underline text-left">Recipe Suggestion {index + 1}</AccordionTrigger>
+                      <AccordionTrigger className="text-lg hover:no-underline text-left">{recipe.name}</AccordionTrigger>
                       <AccordionContent className="pt-2">
-                        <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed bg-secondary/50 p-4 rounded-md shadow-inner">{recipe}</pre>
+                        <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed bg-secondary/50 p-4 rounded-md shadow-inner">{recipe.steps}</pre>
                       </AccordionContent>
                     </AccordionItem>
                   ))}

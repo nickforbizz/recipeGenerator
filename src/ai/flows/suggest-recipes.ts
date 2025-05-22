@@ -18,10 +18,16 @@ const SuggestRecipesInputSchema = z.object({
 });
 export type SuggestRecipesInput = z.infer<typeof SuggestRecipesInputSchema>;
 
+const RecipeDetailSchema = z.object({
+  name: z.string().describe('The name of the suggested recipe.'),
+  steps: z.string().describe('Detailed, step-by-step instructions to prepare the meal, formatted clearly with newlines between steps or paragraphs.'),
+  // Optional: Consider adding fields like description, estimated time, or specific ingredient quantities for this recipe in the future.
+});
+
 const SuggestRecipesOutputSchema = z.object({
   recipes: z
-    .array(z.string())
-    .describe('A list of suggested recipes based on the ingredients.'),
+    .array(RecipeDetailSchema)
+    .describe('A list of suggested recipes, each with a name and detailed preparation steps.'),
 });
 export type SuggestRecipesOutput = z.infer<typeof SuggestRecipesOutputSchema>;
 
@@ -33,7 +39,17 @@ const prompt = ai.definePrompt({
   name: 'suggestRecipesPrompt',
   input: {schema: SuggestRecipesInputSchema},
   output: {schema: SuggestRecipesOutputSchema},
-  prompt: `Given the following ingredients, suggest some recipes that can be made with them:\n\nIngredients: {{{ingredients}}}\n\nRecipes:`, 
+  prompt: `You are an expert chef. Based on the ingredients provided, suggest suitable recipes.
+For each recipe, you must provide:
+1.  A "name" for the recipe.
+2.  Detailed, step-by-step "steps" for preparing the meal. Ensure these steps are clear, comprehensive, and easy to follow. Format the steps with newlines between each step or paragraph.
+
+Ingredients:
+{{#each ingredients}}
+- {{{this}}}
+{{/each}}
+
+Please provide the recipe details.`,
 });
 
 const suggestRecipesFlow = ai.defineFlow(
