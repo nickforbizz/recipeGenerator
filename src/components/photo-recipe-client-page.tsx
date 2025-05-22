@@ -1,13 +1,15 @@
+
 "use client";
 
-import { useState, type ChangeEvent, useEffect, useRef } from 'react';
+import { useState, type ChangeEvent, useEffect } from 'react';
 import Image from 'next/image';
-import { Camera, ChefHat, Sparkles, UploadCloud, Trash2, PlusCircle, Loader2, AlertCircle } from 'lucide-react';
+import { Camera, ChefHat, Sparkles, UploadCloud, Trash2, PlusCircle, Loader2, AlertCircle, Download, Twitter, Instagram, Share2 } from 'lucide-react';
+import jsPDF from 'jspdf';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+// import { Label } from '@/components/ui/label'; // Label seems unused
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -16,12 +18,8 @@ import { useToast } from '@/hooks/use-toast';
 import { detectIngredients } from '@/ai/flows/detect-ingredients';
 import type { DetectIngredientsOutput } from '@/ai/flows/detect-ingredients';
 import { suggestRecipes } from '@/ai/flows/suggest-recipes';
-import type { SuggestRecipesOutput } from '@/ai/flows/suggest-recipes';
+import type { RecipeDetail, SuggestRecipesOutput } from '@/ai/flows/suggest-recipes';
 
-interface RecipeDetail {
-  name: string;
-  steps: string;
-}
 
 export default function PhotoRecipeClientPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -115,8 +113,37 @@ export default function PhotoRecipeClientPage() {
       setIsLoadingRecipes(false);
     }
   };
+
+  const handleDownloadPdf = (recipe: RecipeDetail) => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text(recipe.name, 10, 20);
+    doc.setFontSize(12);
+    
+    // Split steps into lines that fit page width
+    const splitSteps = doc.splitTextToSize(recipe.steps, 180); // 180 is approx width in mm for A4
+    doc.text(splitSteps, 10, 30);
+    
+    doc.save(`${recipe.name.toLowerCase().replace(/\s+/g, '_')}.pdf`);
+    toast({ title: "PDF Downloaded", description: `${recipe.name}.pdf has been downloaded.` });
+  };
+
+  const handleShareTwitter = (recipe: RecipeDetail) => {
+    const text = `Check out this recipe for ${recipe.name}!\n\nSteps:\n${recipe.steps.substring(0, 150)}...\n\n#PhotoRecipe #Food`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    window.open(twitterUrl, '_blank');
+  };
+
+  const handleCopyToClipboard = (recipe: RecipeDetail, platform: string) => {
+    const textToCopy = `Recipe: ${recipe.name}\n\nSteps:\n${recipe.steps}\n\n#PhotoRecipe`;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      toast({ title: "Recipe Copied!", description: `Paste this recipe into your ${platform} post.` });
+    }).catch(err => {
+      console.error(`Could not copy text for ${platform}: `, err);
+      toast({ title: "Copy Failed", description: "Could not copy recipe to clipboard.", variant: "destructive" });
+    });
+  };
   
-  // Clean up preview URL
   useEffect(() => {
     return () => {
       if (imagePreviewUrl) {
@@ -136,7 +163,6 @@ export default function PhotoRecipeClientPage() {
       </header>
 
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Left Column: Image Upload & Ingredients */}
         <div className="space-y-8">
           <Card className="shadow-lg">
             <CardHeader>
@@ -249,7 +275,6 @@ export default function PhotoRecipeClientPage() {
           )}
         </div>
 
-        {/* Right Column: Recipe Suggestions */}
         <div className="space-y-8">
           <Card className="shadow-lg min-h-[300px]">
             <CardHeader>
@@ -280,6 +305,24 @@ export default function PhotoRecipeClientPage() {
                       <AccordionTrigger className="text-lg hover:no-underline text-left">{recipe.name}</AccordionTrigger>
                       <AccordionContent className="pt-2">
                         <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed bg-secondary/50 p-4 rounded-md shadow-inner">{recipe.steps}</pre>
+                        <div className="mt-4 flex flex-wrap gap-2 justify-start">
+                          <Button variant="outline" size="sm" onClick={() => handleDownloadPdf(recipe)}>
+                            <Download size={16} className="mr-2" />
+                            Download PDF
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleShareTwitter(recipe)}>
+                            <Twitter size={16} className="mr-2" />
+                            Share on X
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(recipe, 'Instagram')}>
+                            <Instagram size={16} className="mr-2" />
+                            Copy for Instagram
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(recipe, 'TikTok')}>
+                            <Share2 size={16} className="mr-2" /> {/* Using Share2 as placeholder for TikTok */}
+                            Copy for TikTok
+                          </Button>
+                        </div>
                       </AccordionContent>
                     </AccordionItem>
                   ))}
@@ -303,3 +346,4 @@ export default function PhotoRecipeClientPage() {
     </div>
   );
 }
+
